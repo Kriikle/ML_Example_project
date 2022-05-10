@@ -7,7 +7,11 @@ This project build uses [Forest Cover](https://www.kaggle.com/competitions/fores
 ```sh
 poetry install --no-dev
 ```
-5. Run train with the following command:
+5. To create pandas profiling report use the following command:
+```sh
+poetry run eda
+```
+6. Run train with the following command:
 ```sh
 poetry run train 
 ```
