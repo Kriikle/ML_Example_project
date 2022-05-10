@@ -1,5 +1,7 @@
 
+from errno import ESTALE
 from pathlib import Path
+from xmlrpc.client import Boolean
 from joblib import dump
 
 import argparse
@@ -7,12 +9,14 @@ import argparse
 import mlflow
 import mlflow.sklearn
 from sklearn.metrics import accuracy_score,f1_score,recall_score,roc_auc_score
+
 from sklearn.model_selection import KFold
 
 import numpy as np
 
 from .data import get_dataset
 from .pipeline import create_pipeline
+from .hyperparam_finder import finder
 
 parser = argparse.ArgumentParser(description='Program parasms')
 
@@ -32,6 +36,14 @@ parser.add_argument(
     type=int,
     default=0,
     help="0:LogisticRegression;else:LogisticRegression"
+)
+
+# Param finder
+parser.add_argument(
+    '-finder',
+    type=bool,
+    default=False,
+    help="If you have a lot of time use True"
 )
 
 
@@ -67,7 +79,7 @@ parser.add_argument(
 parser.add_argument(
     '-n_estimators',
     type=int, 
-    default=100,
+    default=1000,
     help = "RandomForestClassifier parametr"
 )
 
@@ -99,6 +111,7 @@ def train(
     n_estimators=args.n_estimators,
     criterion=args.criterion,
     max_depth=args.max_depth,
+    auto_finder = args.finder,
     target="Cover_Type"
 ):
     features_train, features_val, target_train, target_val = get_dataset(
@@ -108,6 +121,19 @@ def train(
         target,
     )
     with mlflow.start_run():
+        if auto_finder == True:
+            best_params,score = finder(features_train,target_train,model_num)
+            if model_num==0:
+                max_iter=best_params['max_iter']
+                logreg_C=best_params['C']
+                random_state=best_params['random_state']
+            else:
+                n_estimators=n_estimators=best_params['n_estimators']
+                criterion=criterion=best_params['criterion']
+                max_depth=best_params['max_depth']
+            # mlflow.log_metric("Nested_score", score)
+            # print(best_params,score)
+
         pipeline = create_pipeline(
             model_num=model_num,
             use_scaler=use_scaler,
@@ -118,6 +144,8 @@ def train(
             criterion=criterion,
             max_depth=max_depth
         )
+
+        
         pipeline.fit(features_train, target_train)
         predited = pipeline.predict(features_val)
         accuracy = accuracy_score(target_val, predited)
