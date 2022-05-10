@@ -1,6 +1,7 @@
 import pandas as pd
 import pandas_profiling
 
+
 def create_profile_report():
     """
     Crating report with pandas profile

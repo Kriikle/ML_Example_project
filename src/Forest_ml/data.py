@@ -1,18 +1,15 @@
 from ast import Str
-import logging
 from pathlib import Path
 from typing import Tuple
 
-#import click
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
 
 def get_dataset(
-    csv_path: Path, random_state: int, test_split_ratio: float,target: Str
+    csv_path: Path, random_state: int, test_split_ratio: float, target: Str
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
     dataset = pd.read_csv(csv_path)
-    #click.echo(f"Dataset shape: {dataset.shape}.")
     features = dataset.drop(target, axis=1)
     target = dataset[target]
     features_train, features_val, target_train, target_val = train_test_split(
