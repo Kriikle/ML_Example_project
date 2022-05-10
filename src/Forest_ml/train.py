@@ -6,8 +6,10 @@ import argparse
 
 import mlflow
 import mlflow.sklearn
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score,f1_score,recall_score,roc_auc_score
+from sklearn.model_selection import KFold
 
+import numpy as np
 
 from .data import get_dataset
 from .pipeline import create_pipeline
@@ -15,8 +17,14 @@ from .pipeline import create_pipeline
 parser = argparse.ArgumentParser(description='Program parasms')
 
 # file path
-parser.add_argument('-dataset_path', type=Path, default="data/train.csv")
-parser.add_argument('-save_model_path', type=Path, default="data/model.joblib")
+parser.add_argument(
+    '-dataset_path',
+    type=Path, default="data/train.csv",
+    help='Path to dataset')
+parser.add_argument(
+    '-save_model_path',
+    type=Path, default="data/model.joblib",
+    help='Path to output file')
 
 # Model select
 parser.add_argument(
@@ -27,23 +35,55 @@ parser.add_argument(
 )
 
 
-parser.add_argument('-use_scaler', type=bool, default=True)
+parser.add_argument(
+    '-use_scaler',
+    type=bool,
+    default=True,
+    help="Scalar using or not"
+)
 
-# First model
-parser.add_argument('-max_iter', type=int, default=100)
-parser.add_argument('-logreg_C', type=float, default=1)
-parser.add_argument('-random_state', type=int, default=42)
+# First model LogisticRegression
+parser.add_argument(
+    '-max_iter', 
+    type=int, 
+    default=100,
+    help = "LogisticRegression parametr"
+)
+parser.add_argument(
+    '-logreg_C',
+    type=float,
+    default=1,
+    help = "LogisticRegression parametr"
+)
+parser.add_argument(
+    '-random_state',
+    type=int,
+    default=42,
+    help = "LogisticRegression parametr"
+)
 
 
-# Second model
-parser.add_argument('-n_estimators', type=int, default=100)
+# Second model RandomForestClassifier
+parser.add_argument(
+    '-n_estimators',
+    type=int, 
+    default=100,
+    help = "RandomForestClassifier parametr"
+)
+
 parser.add_argument(
     '-criterion',
     type=str,
     default='gini',
-    choices=['gini', 'entropy']
+    choices=['gini', 'entropy'],
+    help = "RandomForestClassifier parametr"
 )
-parser.add_argument('-max_depth', type=int, default=None)
+parser.add_argument(
+    '-max_depth',
+    type=int, 
+    default=None,
+    help = "RandomForestClassifier parametr"
+)
 
 args = parser.parse_args()
 
@@ -79,17 +119,26 @@ def train(
             max_depth=max_depth
         )
         pipeline.fit(features_train, target_train)
-        accuracy = accuracy_score(target_val, pipeline.predict(features_val))
+        predited = pipeline.predict(features_val)
+        accuracy = accuracy_score(target_val, predited)
+        f1 = f1_score(target_val, predited,average='micro')
+        recall = recall_score(target_val, predited, average='micro')
+        # roc_auc = roc_auc_score(target_val, predited,multi_class="ovo")
+        mlflow.log_param("use_scaler", use_scaler)
         if model_num == 0:
-            mlflow.log_param("Models", "LogisticRegression")
-            mlflow.log_param("use_scaler", use_scaler)
+            mlflow.log_param("Model_type", "LogisticRegression")
+            mlflow.log_param("random_state", random_state)
             mlflow.log_param("max_iter", max_iter)
             mlflow.log_param("logreg_c", logreg_c)
         else:
-            mlflow.log_param("Models", "RandomForestClassifier")
+            mlflow.log_param("Model_type", "RandomForestClassifier")
             mlflow.log_param("n_estimators", n_estimators)
             mlflow.log_param("criterion", criterion)
             mlflow.log_param("max_depth", max_depth)
 
         mlflow.log_metric("accuracy", accuracy)
+        mlflow.log_metric("recall", recall)
+        mlflow.log_metric("f1", f1)
+        # mlflow.log_metric("roc_auc", roc_auc)
+
         dump(pipeline, save_model_path)
