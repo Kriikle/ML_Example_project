@@ -15,3 +15,7 @@ poetry run eda
 ```sh
 poetry run train 
 ```
+7. If you want some help with input arguments use this command:
+```sh
+poetry run train -help
+```
