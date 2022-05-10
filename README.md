@@ -19,3 +19,7 @@ poetry run train
 ```sh
 poetry run train -help
 ```
+8. To use mlflow input this command:
+```sh
+poetry run mlflow ui
+```
